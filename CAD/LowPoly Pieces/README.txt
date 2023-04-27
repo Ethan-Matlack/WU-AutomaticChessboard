@@ -1,0 +1,1 @@
+3D-Print-Optimized Geometric Chess Set Pieces by chuckamcknight on Thingiverse: https://www.thingiverse.com/thing:4168753
