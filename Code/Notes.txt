@@ -1,0 +1,7 @@
+Pins: 
+mot1: step = 10, dir = 11
+mot2: step = 12, dir = 13
+
+mux flip last 8 values
+
+Code from: https://www.instructables.com/Automated-Chessboard/

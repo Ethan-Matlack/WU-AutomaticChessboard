@@ -11,7 +11,7 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x20, 16, 2);
 
-//****************************************  SETUP - NEED TO DEFINE PINS
+//****************************************  SETUP
 void setup() {
   Serial.begin(9600);
 
@@ -54,72 +54,29 @@ void setup() {
   pinMode (BUTTON_WHITE_SWITCH_MOTOR_WHITE, INPUT_PULLUP);
   pinMode (BUTTON_BLACK_SWITCH_MOTOR_BLACK, INPUT_PULLUP);
 
-  lcd_display();
 }
 
 //*****************************************  LOOP
 void loop() {
 
   switch (sequence) {
-    case start:
-      lcd_display();
-      if (button(WHITE) == true) {  // HvsH Mode
-        game_mode = HvsH;
-        sequence = player_white;
-      }
-      else if (button(BLACK) == true) {  // HvsC Mode
-        game_mode = HvsC;
-        sequence = calibration;
-      }
-      break;
-
     case calibration:
-      lcd_display();
       calibrate();
       sequence = player_white;
       break;
 
     case player_white:
-      if (millis() - timer > 995) {  // Display the white player clock
-        countdown();
-        lcd_display();
-      }
       detect_human_movement();
       if (button(WHITE) == true) {  // White player end turn
         new_turn_countdown = true;
         player_displacement();
-        if (game_mode == HvsH) {
-          AI_HvsH();  // Check if movement is valid
-          if (no_valid_move == false) sequence = player_black;
-          else lcd_display();
-        }
-        else if (game_mode == HvsC) {
-          AI_HvsC();
-          sequence = player_black;
-        }
+        AI_HvsC();
+        sequence = player_black;
         break;
 
       case player_black:
-        //  Game mode HvsH
-        if (game_mode == HvsH) {  // Display the black player clock
-          if (millis() - timer > 995) {
-            countdown();
-            lcd_display();
-          }
-          detect_human_movement();
-          if (button(BLACK) == true) {  // Black human player end turn
-            new_turn_countdown = true;
-            player_displacement();
-            AI_HvsH();  // Chekc is movement is valid
-            if (no_valid_move == false) sequence = player_white;
-            else lcd_display();
-          }
-        }
-        //  Game mode HvsC
-        else if (game_mode == HvsC) {
-          black_player_movement();  //  Move the black chess piece
-          sequence = player_white;
-        }
+        black_player_movement();  //  Move the black chess piece
+        sequence = player_white;
         break;
       }
   }
@@ -158,7 +115,7 @@ void motor(byte direction, int speed, float distance) {
 
   float step_number = 0;
 
-  //  Calcul the distance
+  //  Calc the distance
   if (distance == calibrate_speed) step_number = 4;
   else if (direction == LR_BT || direction == RL_TB || direction == LR_TB || direction == RL_BT) step_number = distance * SQUARE_SIZE * 1.44; //  Add an extra length for the diagonal
   else step_number = distance * SQUARE_SIZE;
@@ -195,41 +152,6 @@ void electromagnet(boolean state) {
   }
 }
 
-// ***********************************  COUNTDOWN - not needed
-void countdown() {
-
-  //  Set the time of the current player
-  if (new_turn_countdown == true ) {
-    new_turn_countdown = false;
-    if (sequence == player_white) {
-      second = second_white;
-      minute = minute_white;
-    }
-    else if (sequence == player_black) {
-      second = second_black;
-      minute = minute_black;
-    }
-  }
-
-  //  Countdown
-  timer = millis();
-  second = second - 1;
-  if (second < 1) {
-    second = 60;
-    minute = minute - 1;
-  }
-
-  //  Record the white player time
-  if (sequence == player_white) {
-    second_white = second;
-    minute_white = minute;
-  }
-  //  Record the black player time
-  else if (sequence == player_black) {
-    second_black = second;
-    minute_black = minute;
-  }
-}
 
 // ***********************  BLACK PLAYER MOVEMENT
 void black_player_movement() {
@@ -358,61 +280,11 @@ void black_player_movement() {
   }
   electromagnet(false);
 
-  //  Upadte the reed sensors states with the Balck move
+  //  Update the reed sensors states with the Balck move
   reed_sensor_status_memory[convert_table[departure_coord_Y]][departure_coord_X - 1] = 1;
   reed_sensor_status_memory[convert_table[arrival_coord_Y]][arrival_coord_X - 1] = 0;
   reed_sensor_status[convert_table[departure_coord_Y]][departure_coord_X - 1] = 1;
   reed_sensor_status[convert_table[arrival_coord_Y]][arrival_coord_X - 1] = 0;
-}
-
-//**********************************  LCD DISPLAY - SHOWS IF MOVE IS VALID AND TIME - not needed?
-void lcd_display() {
-
-  lcd.backlight();
-
-  if (no_valid_move == true) {
-    lcd.setCursor(0, 0);
-    lcd.print("  NO VALID MOVE  ");
-    lcd.setCursor(0, 1);
-    lcd.print("                ");
-    delay(2000);
-    no_valid_move = false;
-    return;
-  }
-
-  switch (sequence) {
-    case start_up:
-      lcd.setCursor(0, 0);
-      lcd.print("   AUTOMATIC    ");
-      lcd.setCursor(0, 1);
-      lcd.print("   CHESSBOARD   ");
-      sequence = start;
-      delay(4000);
-    case start:
-      lcd.setCursor(0, 0);
-      lcd.print(" PRESS A - HvsH ");
-      lcd.setCursor(0, 1);
-      lcd.print(" PRESS B - HvsC ");
-      break;
-    case calibration:
-      lcd.setCursor(0, 0);
-      lcd.print("  CALIBRATION   ");
-      lcd.setCursor(0, 1);
-      lcd.print("                ");
-      break;
-    case player_white:
-      lcd.setCursor(0, 0);
-      lcd.print("     WHITE      ");
-      lcd.setCursor(0, 1);
-      lcd.print("     " + String(minute) + " : " + String(second) + "     ");
-      break;
-    case player_black:
-      lcd.setCursor(0, 0);
-      lcd.print("     BLACK      ");
-      lcd.setCursor(0, 1);
-      lcd.print("     " + String(minute) + " : " + String(second) + "     ");
-      break;
-  }
 }
 
 //************************  DETECT HUMAN MOVEMENT
@@ -485,3 +357,5 @@ void player_displacement() {
   mov[2] = table2[reed_line[1]];
   mov[3] = table1[reed_colone[1]];
 }
+
+

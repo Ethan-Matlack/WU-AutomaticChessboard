@@ -13,7 +13,7 @@ byte reed_line[2];
 
 //  Game setting
 enum {start_up, start, calibration, player_white, player_black};
-byte sequence = start_up;
+byte sequence = calibration;
 enum {T_B, B_T, L_R, R_L, LR_BT, RL_TB, LR_TB, RL_BT, calibrate_speed};
 // T=Top  -  B=Bottom  -  L=Left  -  R=Right
 byte game_mode = 0;
