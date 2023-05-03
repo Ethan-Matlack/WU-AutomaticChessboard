@@ -38,7 +38,7 @@ const byte MOTOR_WHITE_DIR (2);
 const byte MOTOR_WHITE_STEP (3);
 const byte MOTOR_BLACK_DIR (4);
 const byte MOTOR_BLACK_STEP (5);
-const byte SQUARE_SIZE = 195;
+const byte SQUARE_SIZE = 195; //mm
 const int SPEED_SLOW (3000);
 const int SPEED_FAST (1000);
 
