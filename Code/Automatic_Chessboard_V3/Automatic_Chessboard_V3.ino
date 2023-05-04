@@ -29,7 +29,7 @@ void setup() {
     pinMode (MUX_SELECT [i], OUTPUT);
     digitalWrite(MUX_SELECT [i], HIGH);
   }
-  pinMode (MUX_OUTPUT, INPUT_PULLUP);
+  //pinMode (MUX_OUTPUT, INPUT_PULLUP);
 
   //  Set the reed switches status
   for (byte i = 2; i < 6; i++) {
@@ -91,8 +91,8 @@ boolean button(byte type) {
 void calibrate() {
 
   //  Slow displacements up to touch the limit switches
-  while (digitalRead(BUTTON_WHITE_SWITCH_MOTOR_WHITE) == HIGH) motor(B_T, SPEED_SLOW, calibrate_speed);
-  while (digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK) == HIGH) motor(L_R, SPEED_SLOW, calibrate_speed);
+  while (digitalRead(BUTTON_WHITE_SWITCH_MOTOR_WHITE) == LOW) motor(B_T, SPEED_SLOW, calibrate_speed);
+  while (digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK) == ) motor(L_R, SPEED_SLOW, calibrate_speed);
   delay(500);
 
   //  Rapid displacements up to the Black start position (e7)
@@ -142,7 +142,6 @@ void electromagnet(boolean state) {
     digitalWrite(MAGNET, LOW);
   }
 }
-
 
 // ***********************  BLACK PLAYER MOVEMENT
 void black_player_movement() {
@@ -286,21 +285,18 @@ void detect_human_movement() {
   byte row = 0;
 
   for (byte i = 0; i < 4; i++) {
-    digitalWrite(MUX_SELECT[i], LOW);
     for (byte j = 0; j < 16; j++) {
       for (byte k = 0; k < 4; k++) {
-        digitalWrite(MUX_ADDR [k], MUX_CHANNEL [j][k]);
+        digitalWrite(MUX_ADDR[k], MUX_CHANNEL[j][k]);
       }
-      reed_sensor_record[column][row] = digitalRead(MUX_OUTPUT);
+      reed_sensor_record[column][row] = digitalRead(MUX_SELECT[i]);
       row++;
       if (j == 7) {
         column++;
         row = 0;
       }
     }
-    for (byte l = 0; l < 4; l++) {
-      digitalWrite(MUX_SELECT[l], HIGH);
-    }
+
     if (i == 0) column = 4;
     if (i == 1) column = 2;
     if (i == 2) column = 0;
@@ -313,7 +309,6 @@ void detect_human_movement() {
   }
 
   //  Compare the old and new status of the reed switches
-
   for (byte i = 0; i < 8; i++) {
     for (byte j = 0; j < 8; j++) {
       if (reed_sensor_status[i][j] != reed_sensor_status_memory[i][j]) {

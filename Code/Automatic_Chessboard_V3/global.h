@@ -12,12 +12,10 @@ byte reed_colone[2];
 byte reed_line[2];
 
 //  Game setting
-enum {start_up, start, calibration, player_white, player_black};
+enum {calibration, player_white, player_black};
 byte sequence = calibration;
 enum {T_B, B_T, L_R, R_L, LR_BT, RL_TB, LR_TB, RL_BT, calibrate_speed};
 // T=Top  -  B=Bottom  -  L=Left  -  R=Right
-//byte game_mode = 0;
-//enum {HvsH, HvsC};
 
 //  Electromagnet
 const byte MAGNET (6);
@@ -29,7 +27,7 @@ byte second_white = second;
 byte second_black = second;
 byte minute_white = minute;
 byte minute_black = minute;
-unsigned long timer = 0;
+//unsigned long timer = 0;
 boolean start_black = true;
 boolean new_turn_countdown = false;
 
@@ -38,14 +36,14 @@ const byte MOTOR_WHITE_DIR (11);
 const byte MOTOR_WHITE_STEP (10);
 const byte MOTOR_BLACK_DIR (13);
 const byte MOTOR_BLACK_STEP (12);
-const byte SQUARE_SIZE = 195; //mm
+const byte SQUARE_SIZE = 195; //mm, change 
 const int SPEED_SLOW (3000);
 const int SPEED_FAST (1000);
 
 //  Multiplexer
-const byte MUX_ADDR [4] = {A3, A2, A1, A0};
-const byte MUX_SELECT [4] = {5, 4, 3, 2};
-const byte MUX_OUTPUT (12); //?
+const byte MUX_ADDR [4] = {A3, A2, A1, A0}; //Select
+const byte MUX_SELECT [4] = {5, 4, 3, 2}; //Signal - Output
+//const byte MUX_OUTPUT (12); 
 const byte MUX_CHANNEL[16][4] = {
   {0, 0, 0, 0},
   {1, 0, 0, 0},
@@ -55,7 +53,7 @@ const byte MUX_CHANNEL[16][4] = {
   {1, 0, 1, 0},
   {0, 1, 1, 0},
   {1, 1, 1, 0},
-  {1, 1, 1, 1},
+  {1, 1, 1, 1}, //flipped
   {0, 1, 1, 1},
   {1, 0, 1, 1},
   {0, 0, 1, 1},

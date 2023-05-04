@@ -1,3 +1,6 @@
+typedef bool boolean;
+#include <windows.h>
+
 //  Chessboard
 int reed_sensor_status [8][8];
 int reed_sensor_record [8][8];
@@ -43,9 +46,9 @@ const int SPEED_SLOW (3000);
 const int SPEED_FAST (1000);
 
 //  Multiplexer
-const byte MUX_ADDR [4] = {A3, A2, A1, A0};
-const byte MUX_SELECT [4] = {5, 4, 3, 2};
-const byte MUX_OUTPUT (12); //?
+const byte MUX_ADDR [4] = {A3, A2, A1, A0}; //select pins
+const byte MUX_SELECT [4] = {5, 4, 3, 2}; //signal
+const byte MUX_OUTPUT (12); //ours is signal
 const byte MUX_CHANNEL[16][4] = {
   {0, 0, 0, 0},
   {1, 0, 0, 0},

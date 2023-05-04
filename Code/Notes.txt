@@ -5,3 +5,7 @@ mot2: step = 12, dir = 13
 mux flip last 8 values
 
 Code from: https://www.instructables.com/Automated-Chessboard/
+
+reed (analog): 0,1,2,3
+reed(select/digital): 2,34,5
+2 is LSB select 0

@@ -176,62 +176,62 @@ void serialBoard() {
 }
 
 //******************************  AI HUMAN PLAYER
-void AI_HvsH() {
-  // Take move from human
-  inputString += mov;
-  if (sequence == 3) {
-    Serial.print(mn);
-    Serial.print(". ");
-  }
-  else if (sequence == 4) Serial.print("   ");
+// void AI_HvsH() {
+//   // Take move from human
+//   inputString += mov;
+//   if (sequence == 3) {
+//     Serial.print(mn);
+//     Serial.print(". ");
+//   }
+//   else if (sequence == 4) Serial.print("   ");
 
-  Serial.print(inputString.substring(0, 4));
-  c[0] = inputString.charAt(0);
-  c[1] = inputString.charAt(1);
-  c[2] = inputString.charAt(2);
-  c[3] = inputString.charAt(3);
-  c[4] = 0;
-  // clear the string:
-  inputString = "";
-  stringComplete = false;
+//   Serial.print(inputString.substring(0, 4));
+//   c[0] = inputString.charAt(0);
+//   c[1] = inputString.charAt(1);
+//   c[2] = inputString.charAt(2);
+//   c[3] = inputString.charAt(3);
+//   c[4] = 0;
+//   // clear the string:
+//   inputString = "";
+//   stringComplete = false;
 
-  K = *c - 16 * c[1] + 799, L = c[2] - 16 * c[3] + 799; /* parse entered move */
-  N = 0;
-  T = 0x3F;                                 /* T=Computer Play strength */
-  bkp();                                    /* Save the board just in case */
-  r = D(-I, I, Q, O, 1, 3);                 /* Check & do the human movement */
-  if ( !(r > -I + 1) ) {
-    Serial.println("Lose ");
-    gameOver();
-  }
+//   K = *c - 16 * c[1] + 799, L = c[2] - 16 * c[3] + 799; /* parse entered move */
+//   N = 0;
+//   T = 0x3F;                                 /* T=Computer Play strength */
+//   bkp();                                    /* Save the board just in case */
+//   r = D(-I, I, Q, O, 1, 3);                 /* Check & do the human movement */
+//   if ( !(r > -I + 1) ) {
+//     Serial.println("Lose ");
+//     gameOver();
+//   }
 
-  if (sequence == 3) {
-    if (k == 0x10) {                          /* The flag turn must change to 0x08 */
-      Serial.println("  No valid move");
-      no_valid_move = true;
-      return;
-    }
-    strcpy(lastH, c);                         /* Valid human movement */
-    Serial.println("");
-    serialBoard();
-  }
+//   if (sequence == 3) {
+//     if (k == 0x10) {                          /* The flag turn must change to 0x08 */
+//       Serial.println("  No valid move");
+//       no_valid_move = true;
+//       return;
+//     }
+//     strcpy(lastH, c);                         /* Valid human movement */
+//     Serial.println("");
+//     serialBoard();
+//   }
 
-  if (sequence == 4) {
-    if (k == 0x08) {
-      Serial.println("  No valid move");
-      no_valid_move = true;
-      return;
-    }
-    strcpy(lastM, c);
-    r = D(-I, I, Q, O, 1, 3);
-    if ( !(r > -I + 1) ) {
-      gameOver();
-    }
-    Serial.println("");
-    serialBoard();
-  }
-  if (sequence == 3) mn++; /* Next move */
-}
+//   if (sequence == 4) {
+//     if (k == 0x08) {
+//       Serial.println("  No valid move");
+//       no_valid_move = true;
+//       return;
+//     }
+//     strcpy(lastM, c);
+//     r = D(-I, I, Q, O, 1, 3);
+//     if ( !(r > -I + 1) ) {
+//       gameOver();
+//     }
+//     Serial.println("");
+//     serialBoard();
+//   }
+//   if (sequence == 3) mn++; /* Next move */
+// }
 
 //***************************  AI COMPUTER PLAYER
 void AI_HvsC() {
