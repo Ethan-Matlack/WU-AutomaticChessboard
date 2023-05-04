@@ -8,8 +8,6 @@
 #include "global.h"
 #include "Micro_Max.h"
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd(0x20, 16, 2);
 
 //****************************************  SETUP
 void setup() {
@@ -44,12 +42,6 @@ void setup() {
   //  MicroMax
   lastH[0] = 0;
 
-  //  LCD
-  lcd.init();
-
-  //  Countdown
-  timer = millis();
-
   //  Arcade button - Limit Switch
   pinMode (BUTTON_WHITE_SWITCH_MOTOR_WHITE, INPUT_PULLUP);
   pinMode (BUTTON_BLACK_SWITCH_MOTOR_BLACK, INPUT_PULLUP);
@@ -68,7 +60,6 @@ void loop() {
     case player_white:
       detect_human_movement();
       if (button(WHITE) == true) {  // White player end turn
-        new_turn_countdown = true;
         player_displacement();
         AI_HvsC();
         sequence = player_black;
