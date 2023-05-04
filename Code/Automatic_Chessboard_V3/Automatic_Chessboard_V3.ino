@@ -92,7 +92,7 @@ void calibrate() {
 
   //  Slow displacements up to touch the limit switches
   while (digitalRead(BUTTON_WHITE_SWITCH_MOTOR_WHITE) == LOW) motor(B_T, SPEED_SLOW, calibrate_speed);
-  while (digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK) == ) motor(L_R, SPEED_SLOW, calibrate_speed);
+  while (digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK) == LOW) motor(L_R, SPEED_SLOW, calibrate_speed);
   delay(500);
 
   //  Rapid displacements up to the Black start position (e7)

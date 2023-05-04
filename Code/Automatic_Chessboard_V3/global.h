@@ -64,8 +64,8 @@ const byte MUX_CHANNEL[16][4] = {
 };
 
 //  Button - Switch
-const byte BUTTON_WHITE_SWITCH_MOTOR_WHITE (11);
-const byte BUTTON_BLACK_SWITCH_MOTOR_BLACK (10);
+const byte BUTTON_WHITE_SWITCH_MOTOR_WHITE (0);
+const byte BUTTON_BLACK_SWITCH_MOTOR_BLACK (1);
 enum {WHITE, BLACK};
 
 //  MicroMax
