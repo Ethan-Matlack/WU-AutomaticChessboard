@@ -1,8 +1,23 @@
-// TODO:
-// Move MAGNET from 6 to A0
-// Move mux signals to 6-9 and ground the common
-// Verify that there's enough border-room to perform piece removal/castling
+// -----------------------------------------------------------------------------------------------
+// --- AUTOMATED CHESSBOARD PROJECT --------------------------------------------------------------
+/*
 
+Widener University
+RE-404: Mechatronics Lab
+Final Project
+2023-05-05
+
+Team Members:
+- Ethan Matlack
+- Dimple Gandevia
+- Chase Crane
+
+TODO:
+- Move MAGNET from 6 to A0
+- Move mux signals to 6-9 and ground the common
+- Verify that there's enough border-room to perform piece removal/castling
+
+*/
 // -----------------------------------------------------------------------------------------------
 // --- LIBRARIES ---------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
@@ -293,10 +308,10 @@ on its assumed type (derived from the different in reed switch board states.)
 {
   // Convert the algebraic notation of the move into coordinates.
   // For example, "e2e4" would be converted to (5,2) -> (5,4)
-  int departure_coord_X = lastM[0] - 'a' + 1;
-  int departure_coord_Y = lastM[1] - '0';
-  int arrival_coord_X = lastM[2] - 'a' + 1;
-  int arrival_coord_Y = lastM[3] - '0';
+  int coord_depart_X = lastM[0] - 'a' + 1;
+  int coord_depart_Y = lastM[1] - '0';
+  int coord_arrival_X = lastM[2] - 'a' + 1;
+  int coord_arrival_Y = lastM[3] - '0';
 
   // Initialize variables to keep track of how much the trolley needs to move
   byte displacement_X = 0;
@@ -307,7 +322,7 @@ on its assumed type (derived from the different in reed switch board states.)
   // status at the location where the move ended.
   int convert_table [] = {0, 7, 6, 5, 4, 3, 2, 1, 0}; // Table to convert algebraic to array index
   byte white_capturing = 1;
-  if (reed_sensor_status_memory[convert_table[arrival_coord_Y]][arrival_coord_X - 1] == 0) {
+  if (reed_sensor_status_memory[convert_table[coord_arrival_Y]][coord_arrival_X - 1] == 0) {
     white_capturing = 0;
   }
 
@@ -316,46 +331,43 @@ on its assumed type (derived from the different in reed switch board states.)
   for (byte i = white_capturing; i < 2; i++) {
     if (i == 0) {
       // On the first iteration, calculate the displacement needed to reach the piece being captured
-      displacement_X = abs(arrival_coord_X - trolley_coordinate_X);
-      displacement_Y = abs(arrival_coord_Y - trolley_coordinate_Y);
+      displacement_X = coord_arrival_X - trolley_coordinate_X;
+      displacement_Y = coord_arrival_Y - trolley_coordinate_Y;
     }
     else if (i == 1) {
-      // On the second iteration, calculate the displacement needed to return to the original piece that needs to move
-      displacement_X = abs(departure_coord_X - trolley_coordinate_X);
-      displacement_Y = abs(departure_coord_Y - trolley_coordinate_Y);
+      // On the second iteration, calculate the displacement needed to return to the original piece
+      displacement_X = coord_depart_X - trolley_coordinate_X;
+      displacement_Y = coord_depart_Y - trolley_coordinate_Y;
     }
     
-    // Traverse the trolley to the piece that needs to be removed (if it is the first iteration of the loop)
-    // If it is the second iteration, this will traverse to the player's piece that needs to be moved
-    if (departure_coord_X > trolley_coordinate_X) moveRect(-displacement_X, 0, SPEED_SLOW);
-    else if (departure_coord_X < trolley_coordinate_X) moveRect(displacement_X, 0, SPEED_SLOW);
-    if (departure_coord_Y > trolley_coordinate_Y) moveRect(0, displacement_Y, SPEED_SLOW);
-    else if (departure_coord_Y < trolley_coordinate_Y) moveRect(0, -displacement_Y, SPEED_SLOW);
+    // Traverse the trolley to the piece that needs to be removed (if it is the first iteration
+    // of the loop.) If it is the second iteration, this will traverse to the player's piece that
+    // needs to be moved next.
+    moveDiag(displacementX, displacementY, SPEED_FAST);
 
     if (i == 0) {
       // For the first iteration of the loop (capture), the piece needs to be moved off the board
       electromagnet(true); // Activate the electromagnet to grab the piece
-      moveRect(-0.5, 0, SPEED_SLOW); // Move half a square to the left
-      moveRect(0, arrival_coord_X - 0.5, SPEED_SLOW); // Move to the edge of the board
+      moveRect(0, -0.5, SPEED_SLOW); // Move half a square down
+      moveRect(-(coord_arrival_X + 0.5), 0, SPEED_SLOW); // Exit to the left edge of the board
       electromagnet(false); // Release the piece
 
       // Go back (reverse of the previous moves)
-      moveRect(0.5, 0, SPEED_SLOW);
-      moveRect(0, 0.5 - arrival_coord_X, SPEED_SLOW);
+      moveDiag(coord_arrival_X + 0.5, 0.5, SPEED_FAST);
 
       // Reset the coords to current position
-      trolley_coordinate_X = arrival_coord_X;
-      trolley_coordinate_Y = arrival_coord_Y;
+      trolley_coordinate_X = coord_arrival_X;
+      trolley_coordinate_Y = coord_arrival_Y;
     }
   }
 
   // Reset the coords to current position
-  trolley_coordinate_X = arrival_coord_X;
-  trolley_coordinate_Y = arrival_coord_Y;
+  trolley_coordinate_X = coord_arrival_X;
+  trolley_coordinate_Y = coord_arrival_Y;
 
   // Calc the displacement to make the move
-  displacement_X = arrival_coord_X - departure_coord_X;
-  displacement_Y = arrival_coord_Y - departure_coord_Y;
+  displacement_X = coord_arrival_X - coord_depart_X;
+  displacement_Y = coord_arrival_Y - coord_depart_Y;
 
   // Start the "main" piece movement code. Depending on the type of state change, different code
   // will be run to handle the different pieces and special cases.
@@ -377,10 +389,12 @@ on its assumed type (derived from the different in reed switch board states.)
   }
 
   // Diagonal displacement
-  else if (abs(displacement_X) == abs(displacement_Y)) moveDiag(displacement_X, displacement_Y, SPEED_SLOW);
+  else if (abs(displacement_X) == abs(displacement_Y)) {
+    moveDiag(displacement_X, displacement_Y, SPEED_SLOW);
+  }
 
   // Kingside castling
-  else if (departure_coord_X == 5 && departure_coord_Y == 8 && arrival_coord_X == 7 && arrival_coord_Y == 8) {
+  else if (coord_depart_X == 5 && coord_depart_Y == 8 && coord_arrival_X == 7 && coord_arrival_Y == 8) {
 
     // Move the king off the board and behind the destination square
     moveRect(0.5, 0, SPEED_SLOW);
@@ -400,7 +414,7 @@ on its assumed type (derived from the different in reed switch board states.)
   }
 
   // Queenside (long) castling
-  else if (departure_coord_X == 5 && departure_coord_Y == 8 && arrival_coord_X == 3 && arrival_coord_Y == 8) {
+  else if (coord_depart_X == 5 && coord_depart_Y == 8 && coord_arrival_X == 3 && coord_arrival_Y == 8) {
     
     // Move the king off the board and behind the destination square
     moveRect(0.5, 0, SPEED_SLOW);
