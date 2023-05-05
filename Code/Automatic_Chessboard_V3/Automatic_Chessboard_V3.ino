@@ -50,7 +50,7 @@ void setup() {
 
 //*****************************************  LOOP
 void loop() {
-
+  
   switch (sequence) {
     case calibration:
       calibrate();
@@ -90,14 +90,26 @@ boolean button(byte type) {
 //************************************  CALIBRATE HARD LIMIT OF MOTOR
 void calibrate() {
 
+  Serial.println("Current State:");
+  Serial.println(digitalRead(BUTTON_WHITE_SWITCH_MOTOR_WHITE));
+  Serial.println(digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK));
+  delay(500);
+  
+  Serial.println("HOMING!!");
+  
   //  Slow displacements up to touch the limit switches
-  while (digitalRead(BUTTON_WHITE_SWITCH_MOTOR_WHITE) == LOW) motor(B_T, SPEED_SLOW, calibrate_speed);
-  while (digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK) == LOW) motor(L_R, SPEED_SLOW, calibrate_speed);
+  while (digitalRead(BUTTON_WHITE_SWITCH_MOTOR_WHITE) == HIGH) motor(B_T, SPEED_SLOW, calibrate_speed); // Was B_T
+  Serial.println("Hit Limit A!");
+  delay(500);
+  while (digitalRead(BUTTON_BLACK_SWITCH_MOTOR_BLACK) == HIGH) motor(R_L, SPEED_SLOW, calibrate_speed); // Was L_R
+  Serial.println("Hit Limit B!");
   delay(500);
 
   //  Rapid displacements up to the Black start position (e7)
+  Serial.println("Moving to start!");
   motor(R_L, SPEED_FAST, TROLLEY_START_POSITION_X);
-  motor(T_B, SPEED_FAST, TROLLEY_START_POSITION_Y);
+  motor(B_T, SPEED_FAST, TROLLEY_START_POSITION_Y); // Was T_B
+  Serial.println("Calibration Complete!");
   delay(500);
 }
 
@@ -343,5 +355,3 @@ void player_displacement() {
   mov[2] = table2[reed_line[1]];
   mov[3] = table1[reed_colone[1]];
 }
-
-

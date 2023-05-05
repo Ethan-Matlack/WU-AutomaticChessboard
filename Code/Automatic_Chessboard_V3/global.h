@@ -37,8 +37,8 @@ const byte MOTOR_WHITE_STEP (10);
 const byte MOTOR_BLACK_DIR (13);
 const byte MOTOR_BLACK_STEP (12);
 const byte SQUARE_SIZE = 195; //mm, change 
-const int SPEED_SLOW (3000);
-const int SPEED_FAST (1000);
+const int SPEED_SLOW (5000);
+const int SPEED_FAST (5000);
 
 //  Multiplexer
 const byte MUX_ADDR [4] = {A3, A2, A1, A0}; //Select
