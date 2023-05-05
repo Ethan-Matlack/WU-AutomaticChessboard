@@ -35,8 +35,8 @@ change during program execution.
 */
 
 // Pins
-const byte LIMIT_SWITCH_Y = 0;
-const byte LIMIT_SWITCH_X = 1;
+const byte LIMIT_SWITCH_X = 0;
+const byte LIMIT_SWITCH_Y = 1;
 const byte MUX_SELECT [4] = {2, 3, 4, 5};
 const byte MUX_SIGNAL [4] = {6, 7, 8, 9};
 // pins 10, 11, 12, 13 are used for motors and are defined using objects
@@ -44,12 +44,12 @@ const byte MAGNET = A0;
 
 // Board
 // All dimensions in mm
-const word BOARD_SIZE = 457; // Size of the board's actual tiled area in mm
-const byte BOARD_BOUNDRY_TOP = 5; // Distance between top board edge and hard stop
-const byte BOARD_BOUNDRY_BOTTOM = 5; // Distance between bottom board edge and hard stop
-const byte BOARD_BOUNDRY_LEFT = 30; // Distance between left board edge and hard stop
-const byte BOARD_BOUNDRY_RIGHT = 10; // Distance between right board edge and hard stop
-const float SQUARE_SIZE = BOARD_SIZE / 8; // Size of each square in mm
+const float BOARD_SIZE = 457.2; // Size of the board's actual tiled area in mm
+const float BOARD_BOUNDRY_TOP = 5; // Distance between top board edge and hard stop
+const float BOARD_BOUNDRY_BOTTOM = 9.5; // Distance between bottom board edge and hard stop
+const float BOARD_BOUNDRY_LEFT = 30; // Distance between left board edge and hard stop
+const float BOARD_BOUNDRY_RIGHT = 16; // Distance between right board edge and hard stop
+const float SQUARE_SIZE_MM = BOARD_SIZE / 8; // Size of each square in mm
 
 // Motors
 const word STEPS_PER_REV = 200;
@@ -136,15 +136,15 @@ extern char lastH[], lastM[];
 // These functions will be defined later in the code
 
 void playComputerMove();
-void moveRectMM(long distanceX, long distanceY, int speed);
-void moveRect(long squaresX, long squaresY, int speed);
-void moveDiag(long squaresX, long squaresY, int speed);
+void moveLinMM(float distanceX, float distanceY, int speed);
+void moveLin(float squaresX, float squaresY, int speed);
+void moveDiag(float squaresX, float squaresY, int speed);
 void electromagnet(bool state);
 void readReedSwitches();
 void motorsSetSpeed(int speed);
 void zeroMotors();
-long squaresToSteps(long squares);
-long distanceToSquares(int distanceMM);
+float squaresToSteps(float squares);
+float distanceToSquares(float distanceMM);
 
 // -----------------------------------------------------------------------------------------------
 // --- SETUP -------------------------------------------------------------------------------------
@@ -196,22 +196,28 @@ void loop()
 {
   switch (sequence) {
     case calibration:
+      serialBoard();
       calibrate();
       sequence = player_white;
       break;
     
     case player_white:
-      waitForPlayerMove();
-      decodePlayerMove();
-      AI_HvsC();
-      sequence = player_black;
-      delay(500);
+      serialBoard();
+      delay(3000);
+      Serial.println("Starting game...");
+      if (checkForPlayerMove() == true) {
+        decodePlayerMove();
+        AI_HvsC();
+        sequence = player_black;
+        delay(500);
+      }
       break;
 
     case player_black:
       playComputerMove();
       sequence = player_white;
       delay(500);
+      readReedSwitches();
       break;
   }
 }
@@ -226,24 +232,31 @@ void calibrate()
   motorsSetSpeed(SPEED_SLOW);
 
   // Set a large goal for zero-ing the Y-axis and move towards it until hitting the limit switch
-  motA.move(-12000);
-  motB.move(12000);
-  while (digitalRead(LIMIT_SWITCH_Y) == HIGH) motPair.run();
-  Serial.println("Limit reached for Y-axis");
-  zeroMotors();
+  motA.move(-20000);
+  motB.move(20000);
+  while (digitalRead(LIMIT_SWITCH_X) == HIGH) {
+    motA.run();
+    motB.run();
+  }
+  Serial.println("Limit reached for X-axis");
   delay(250);
+  zeroMotors();
   
   // Set a large goal for zero-ing the Y-axis and move towards it until hitting the limit switch
-  motA.move(12000);
-  motB.move(12000);
-  while (digitalRead(LIMIT_SWITCH_X) == HIGH) motPair.run();
-  Serial.println("Limited reached for X-axis");
+  motA.move(20000);
+  motB.move(20000);
+  while (digitalRead(LIMIT_SWITCH_Y) == HIGH) {
+    motA.run();
+    motB.run();
+  }
+  Serial.println("Limited reached for Y-axis");
+  delay(1000);
   zeroMotors();
-  delay(250);
 
   // Move to the lower left edge of the A1 square and zero
-  moveRectMM(-1*(BOARD_BOUNDRY_RIGHT + BOARD_SIZE), BOARD_BOUNDRY_BOTTOM, SPEED_FAST);
+  moveDiagMM(-1*(BOARD_BOUNDRY_RIGHT + BOARD_SIZE), BOARD_BOUNDRY_BOTTOM, SPEED_FAST);
   zeroMotors();
+  delay(3000);
 
   Serial.println("Calibration Complete!!");
 }
@@ -252,14 +265,13 @@ void calibrate()
 // --- PLAYER & COMPUTER MOVES -------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-void waitForPlayerMove()
+bool checkForPlayerMove()
 {
-  Serial.println("Wait for board scan...");
-  readReedSwitches();
-  Serial.println("Make your move! Click the button when done.");
-
-  // Infinite loop until one of the limit switches is depressed
-  while ((digitalRead(LIMIT_SWITCH_X) == HIGH) || (digitalRead(LIMIT_SWITCH_Y) == HIGH));
+  bool flag = false;
+  if ((digitalRead(LIMIT_SWITCH_X) == HIGH) || (digitalRead(LIMIT_SWITCH_Y) == HIGH)) {
+    flag = true;
+  }
+  return flag;
 }
 
 void decodePlayerMove()
@@ -292,12 +304,16 @@ void decodePlayerMove()
   char table2[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
 
   // Store the state change (move) as an array of chars
-  mov[0] = table2[stateUpdate_row[0]];
-  mov[1] = table1[stateUpdate_col[0]];
-  mov[2] = table2[stateUpdate_row[1]];
-  mov[3] = table1[stateUpdate_col[1]];
-}
+  // mov[0] = table2[stateUpdate_row[0]];
+  // mov[1] = table1[stateUpdate_col[0]];
+  // mov[2] = table2[stateUpdate_row[1]];
+  // mov[3] = table1[stateUpdate_col[1]];
 
+  mov[0] = 'e';
+  mov[1] = '2';
+  mov[2] = 'e';
+  mov[3] = '4';
+}
 
 void playComputerMove()
 /* This function is responsible for playing the computer's move on the chessboard. For simplicity,
@@ -343,13 +359,13 @@ on its assumed type (derived from the different in reed switch board states.)
     // Traverse the trolley to the piece that needs to be removed (if it is the first iteration
     // of the loop.) If it is the second iteration, this will traverse to the player's piece that
     // needs to be moved next.
-    moveDiag(displacementX, displacementY, SPEED_FAST);
+    moveDiag(displacement_X, displacement_Y, SPEED_FAST);
 
     if (i == 0) {
       // For the first iteration of the loop (capture), the piece needs to be moved off the board
       electromagnet(true); // Activate the electromagnet to grab the piece
-      moveRect(0, -0.5, SPEED_SLOW); // Move half a square down
-      moveRect(-(coord_arrival_X + 0.5), 0, SPEED_SLOW); // Exit to the left edge of the board
+      moveLin(0, -0.5, SPEED_SLOW); // Move half a square down
+      moveLin(-(coord_arrival_X + 0.5), 0, SPEED_SLOW); // Exit to the left edge of the board
       electromagnet(false); // Release the piece
 
       // Go back (reverse of the previous moves)
@@ -375,16 +391,16 @@ on its assumed type (derived from the different in reed switch board states.)
   electromagnet(true);
 
   // Knight displacement
-  if (displacement_X == 1 && displacement_Y == 2 || displacement_X == 2 && displacement_Y == 1) {
-    if (displacement_Y == 2) {
-      moveRect((displacement_X * 0.5), 0, SPEED_SLOW);
-      moveRect(displacement_Y, 0, SPEED_SLOW);
-      moveRect((displacement_X * 0.5), 0, SPEED_SLOW);
+  if ((abs(displacement_X) == 1 && abs(displacement_Y) == 2) || (abs(displacement_X) == 2 && abs(displacement_Y) == 1)) {
+    if (abs(displacement_Y) == 2) {
+      moveLin((displacement_X * 0.5), 0, SPEED_SLOW);
+      moveLin(0, displacement_Y, SPEED_SLOW);
+      moveLin((displacement_X * -0.5), 0, SPEED_SLOW);
     }
-    else if (displacement_X == 2) {
-      moveRect(0, (displacement_Y * 0.5), SPEED_SLOW);
-      moveRect(0, displacement_X, SPEED_SLOW);
-      moveRect(0, (displacement_Y * 0.5), SPEED_SLOW);
+    else if (abs(displacement_X) == 2) {
+      moveLin(0, (displacement_Y * 0.5), SPEED_SLOW);
+      moveLin(displacement_X, 0, SPEED_SLOW);
+      moveLin(0, (displacement_Y * -0.5), SPEED_SLOW);
       }
   }
 
@@ -397,44 +413,44 @@ on its assumed type (derived from the different in reed switch board states.)
   else if (coord_depart_X == 5 && coord_depart_Y == 8 && coord_arrival_X == 7 && coord_arrival_Y == 8) {
 
     // Move the king off the board and behind the destination square
-    moveRect(0.5, 0, SPEED_SLOW);
-    moveRect(0, 2, SPEED_SLOW);
+    moveLin(0.5, 0, SPEED_SLOW);
+    moveLin(0, 2, SPEED_SLOW);
     electromagnet(false);
 
     // Move over to the rook, pick it up, and relocate
     moveDiag(-0.5, 1, SPEED_FAST);
     electromagnet(true);
-    moveRect(2, 0, SPEED_SLOW);
+    moveLin(2, 0, SPEED_SLOW);
     electromagnet(false);
 
     // Now put the king in the final position
     moveDiag(1, 1, SPEED_SLOW);
     electromagnet(true);
-    moveRect(0, -0.5, SPEED_SLOW);
+    moveLin(0, -0.5, SPEED_SLOW);
   }
 
   // Queenside (long) castling
   else if (coord_depart_X == 5 && coord_depart_Y == 8 && coord_arrival_X == 3 && coord_arrival_Y == 8) {
     
     // Move the king off the board and behind the destination square
-    moveRect(0.5, 0, SPEED_SLOW);
-    moveRect(0, -2, SPEED_SLOW);
+    moveLin(0.5, 0, SPEED_SLOW);
+    moveLin(0, -2, SPEED_SLOW);
     electromagnet(false);
 
     // Move over to the rook, pick it up, and relocate
     moveDiag(-0.5, -2, SPEED_FAST);
     electromagnet(true);
-    moveRect(3, 0, SPEED_SLOW);
+    moveLin(3, 0, SPEED_SLOW);
     electromagnet(false);
 
     // Now put the king in the final position
     moveDiag(-1, 1, SPEED_SLOW);
     electromagnet(true);
-    moveRect(0, -0.5, SPEED_SLOW);
+    moveLin(0, -0.5, SPEED_SLOW);
   }
 
   // Regular horizontal/vertical displacement
-  else moveRect(displacement_X, displacement_Y, SPEED_SLOW);
+  else moveLin(displacement_X, displacement_Y, SPEED_SLOW);
 
   electromagnet(false);
 }
@@ -481,57 +497,71 @@ void readReedSwitches()
 // -----------------------------------------------------------------------------------------------
 // --- MOTOR HELPER FUNCTIONS --------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
-/* These functions handle the movement of the trolley on the chessboard. moveRectMM is called when
+/* These functions handle the movement of the trolley on the chessboard. moveLinMM is called when
 the distances are given in millimeters, and it converts these values into squares before calling
-moveRect. moveRect then converts the number of squares to the appropriate number of steps for each
+moveLin. moveLin then converts the number of squares to the appropriate number of steps for each
 motor, and moves the trolley accordingly using the motPair object. moveDiag is a helper function
 used to move the trolley diagonally (e.g. for bishop moves), and moves the trolley by the
 appropriate number of steps for both motors in order to achieve a diagonal motion.
 */
 
-void moveRectMM(long distanceX, long distanceY, int speed)
+void moveLinMM(float distanceX, float distanceY, int speed)
 {
-  long squaresX = distanceToSquares(distanceX);
-  long squaresY = distanceToSquares(distanceY);
-  moveRect(squaresX, squaresY, speed);
+  float squaresX = distanceToSquares(distanceX);
+  float squaresY = distanceToSquares(distanceY);
+  moveLin(squaresX, squaresY, speed);
 }
 
-void moveRect(long squaresX, long squaresY, int speed)
+void moveDiagMM(float distanceX, float distanceY, int speed)
+{
+  float squaresX = distanceToSquares(distanceX);
+  float squaresY = distanceToSquares(distanceY);
+  moveDiag(squaresX, squaresY, speed);
+}
+
+void moveLin(float squaresX, float squaresY, int speed)
 {
   motorsSetSpeed(speed);
 
-  long stepsX = squaresToSteps(squaresX);
-  long stepsY = squaresToSteps(squaresY);
-  // long steps[] = {-1*(stepsX + stepsY), (stepsX - stepsY)};
-  // motPair.moveTo(steps);
-  // motPair.runSpeedToPosition();
+  float stepsX = squaresToSteps(squaresX);
+  float stepsY = squaresToSteps(squaresY);
 
-  // Complete the x-component
   if (stepsX > 0) {
+    // Perform the x-translation
     motA.move(-stepsX);
     motB.move(stepsX);
-    motPair.runSpeedToPosition();
+    while ((motA.distanceToGo() != 0) || (motB.distanceToGo() != 0)) {
+    motA.run();
+    motB.run();
+    }
+    Serial.println("Completed x-translate");
   }
   
   if (stepsY > 0) {
-    // Complete the y-component
-    motA.move(stepsY);
+    // Then do the y-translation
+    motA.move(-stepsY);
     motB.move(-stepsY);
-    motPair.runSpeedToPosition();
+    while ((motA.distanceToGo() != 0) || (motB.distanceToGo() != 0)) {
+    motA.run();
+    motB.run();
+    }
+    Serial.println("Completed y-translate");
   }
 }
 
-void moveDiag(long squaresX, long squaresY, int speed)
+void moveDiag(float squaresX, float squaresY, int speed)
 {
   motorsSetSpeed(speed);
 
-  long stepsX = squaresToSteps(squaresX);
-  long stepsY = squaresToSteps(squaresY);
-
-  // Complete both x/y together
-  motA.move(-(stepsX + stepsY));
-  motB.move(stepsX - stepsY);
-  motPair.runSpeedToPosition();
+  float stepsX = squaresToSteps(squaresX);
+  float stepsY = squaresToSteps(squaresY);
+  float steps[] = {-1*(stepsX + stepsY), (stepsX - stepsY)};
+  motA.move(steps[0]);
+  motB.move(steps[1]);
+  while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
+    motA.run();
+    motB.run();
+  }
 }
 
 void motorsSetSpeed(int speed)
@@ -585,15 +615,15 @@ void electromagnet(bool state)
 // --- MISC CONVERTERS ---------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-long squaresToSteps(long squares)
+float squaresToSteps(float squares)
 {
-  long distanceMM = squares * SQUARE_SIZE;
-  long steps = distanceMM * STEPS_PER_MM;
+  float distanceMM = squares * SQUARE_SIZE_MM;
+  float steps = distanceMM * STEPS_PER_MM;
   return steps;
 }
 
-long distanceToSquares(int distanceMM)
+float distanceToSquares(float distanceMM)
 {
-  long squares = distanceMM / SQUARE_SIZE;
+  float squares = distanceMM / SQUARE_SIZE_MM;
   return squares;
 }
