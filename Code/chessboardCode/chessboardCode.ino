@@ -202,8 +202,6 @@ void loop()
       break;
     
     case player_white:
-      serialBoard();
-      delay(3000);
       Serial.println("Starting game...");
       if (checkForPlayerMove() == true) {
         decodePlayerMove();
@@ -309,10 +307,7 @@ void decodePlayerMove()
   // mov[2] = table2[stateUpdate_row[1]];
   // mov[3] = table1[stateUpdate_col[1]];
 
-  mov[0] = 'e';
-  mov[1] = '2';
-  mov[2] = 'e';
-  mov[3] = '4';
+  readMove(); // Call the readMove function
 }
 
 void playComputerMove()
@@ -329,64 +324,26 @@ on its assumed type (derived from the different in reed switch board states.)
   int coord_arrival_X = lastM[2] - 'a' + 1;
   int coord_arrival_Y = lastM[3] - '0';
 
-  // Initialize variables to keep track of how much the trolley needs to move
-  byte displacement_X = 0;
-  byte displacement_Y = 0;
+  // Initialize variables to record the change in coords for the moved piece
+  int displacement_X = coord_arrival_X - coord_depart_X;
+  int displacement_Y = coord_arrival_Y - coord_depart_Y;
 
-  // Check if the move was a capture. In chess, a capture occurs when a piece is
-  // taken by an opponent's piece. This is checked by looking at the reed sensor
-  // status at the location where the move ended.
-  int convert_table [] = {0, 7, 6, 5, 4, 3, 2, 1, 0}; // Table to convert algebraic to array index
-  byte white_capturing = 1;
-  if (reed_sensor_status_memory[convert_table[coord_arrival_Y]][coord_arrival_X - 1] == 0) {
-    white_capturing = 0;
+  // If there was already a piece on the location that the new one is moving to, then
+  // the move must be a capture. Get rid of the captured piece before resuming normally.
+  if (reed_sensor_status_memory[coord_arrival_X][coord_arrival_Y] == 0) {
+    Serial.println("Removing captured piece...");
+    moveToDiag(coord_arrival_X - 0.5, coord_arrival_Y - 0.5, SPEED_FAST); // Move to the piece that gets removed
+    electromagnet(true);
+    moveLin(0.5, 0.5, SPEED_SLOW); // Shift diagonally to avoid hitting other pieces
+    moveToLin(-0.2, 0, SPEED_SLOW); // Slide it off the board to the left side
+    electromagnet(false);
   }
 
-  // If the move was a capture, the piece being captured needs to be removed from the board
-  // This loop handles that
-  for (byte i = white_capturing; i < 2; i++) {
-    if (i == 0) {
-      // On the first iteration, calculate the displacement needed to reach the piece being captured
-      displacement_X = coord_arrival_X - trolley_coordinate_X;
-      displacement_Y = coord_arrival_Y - trolley_coordinate_Y;
-    }
-    else if (i == 1) {
-      // On the second iteration, calculate the displacement needed to return to the original piece
-      displacement_X = coord_depart_X - trolley_coordinate_X;
-      displacement_Y = coord_depart_Y - trolley_coordinate_Y;
-    }
-    
-    // Traverse the trolley to the piece that needs to be removed (if it is the first iteration
-    // of the loop.) If it is the second iteration, this will traverse to the player's piece that
-    // needs to be moved next.
-    moveDiag(displacement_X, displacement_Y, SPEED_FAST);
-
-    if (i == 0) {
-      // For the first iteration of the loop (capture), the piece needs to be moved off the board
-      electromagnet(true); // Activate the electromagnet to grab the piece
-      moveLin(0, -0.5, SPEED_SLOW); // Move half a square down
-      moveLin(-(coord_arrival_X + 0.5), 0, SPEED_SLOW); // Exit to the left edge of the board
-      electromagnet(false); // Release the piece
-
-      // Go back (reverse of the previous moves)
-      moveDiag(coord_arrival_X + 0.5, 0.5, SPEED_FAST);
-
-      // Reset the coords to current position
-      trolley_coordinate_X = coord_arrival_X;
-      trolley_coordinate_Y = coord_arrival_Y;
-    }
-  }
-
-  // Reset the coords to current position
-  trolley_coordinate_X = coord_arrival_X;
-  trolley_coordinate_Y = coord_arrival_Y;
-
-  // Calc the displacement to make the move
-  displacement_X = coord_arrival_X - coord_depart_X;
-  displacement_Y = coord_arrival_Y - coord_depart_Y;
+  // Move to the piece that will get moved
+  moveToDiag(coord_depart_X - 0.5, coord_depart_Y - 0.5, SPEED_FAST);
 
   // Start the "main" piece movement code. Depending on the type of state change, different code
-  // will be run to handle the different pieces and special cases.
+  // will be run to handle the different pieces and special cases. Start by turning the magnet on.
 
   electromagnet(true);
 
@@ -395,7 +352,7 @@ on its assumed type (derived from the different in reed switch board states.)
     if (abs(displacement_Y) == 2) {
       moveLin((displacement_X * 0.5), 0, SPEED_SLOW);
       moveLin(0, displacement_Y, SPEED_SLOW);
-      moveLin((displacement_X * -0.5), 0, SPEED_SLOW);
+      moveLin((displacement_X * 0.5), 0, SPEED_SLOW);
     }
     else if (abs(displacement_X) == 2) {
       moveLin(0, (displacement_Y * 0.5), SPEED_SLOW);
@@ -479,19 +436,6 @@ void readReedSwitches()
       }
     }
   }
-
-  delay(100);
-  for (byte i = 0; i < 8; i++) {
-    Serial.print(reed_sensor_status[i][0]);
-    Serial.print(reed_sensor_status[i][1]);
-    Serial.print(reed_sensor_status[i][2]);
-    Serial.print(reed_sensor_status[i][3]);
-    Serial.print(reed_sensor_status[i][4]);
-    Serial.print(reed_sensor_status[i][5]);
-    Serial.print(reed_sensor_status[i][6]);
-    Serial.print(reed_sensor_status[i][7]);
-    Serial.println();
-  }
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -526,26 +470,24 @@ void moveLin(float squaresX, float squaresY, int speed)
   float stepsX = squaresToSteps(squaresX);
   float stepsY = squaresToSteps(squaresY);
 
-  if (stepsX > 0) {
+  if (abs(stepsX) > 0) {
     // Perform the x-translation
     motA.move(-stepsX);
     motB.move(stepsX);
-    while ((motA.distanceToGo() != 0) || (motB.distanceToGo() != 0)) {
+    while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
     motA.run();
     motB.run();
     }
-    Serial.println("Completed x-translate");
   }
   
-  if (stepsY > 0) {
+  if (abs(stepsY) > 0) {
     // Then do the y-translation
     motA.move(-stepsY);
     motB.move(-stepsY);
-    while ((motA.distanceToGo() != 0) || (motB.distanceToGo() != 0)) {
+    while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
     motA.run();
     motB.run();
     }
-    Serial.println("Completed y-translate");
   }
 }
 
@@ -558,6 +500,49 @@ void moveDiag(float squaresX, float squaresY, int speed)
   float steps[] = {-1*(stepsX + stepsY), (stepsX - stepsY)};
   motA.move(steps[0]);
   motB.move(steps[1]);
+  while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
+    motA.run();
+    motB.run();
+  }
+}
+
+void moveToLin(float squareCoordX, float squareCoordY, int speed)
+{
+  motorsSetSpeed(speed);
+
+  float stepsX = squaresToSteps(squareCoordX);
+  float stepsY = squaresToSteps(squareCoordY);
+
+  if (abs(stepsX) > 0) {
+    // Perform the x-translation
+    motA.moveTo(-stepsX);
+    motB.moveTo(stepsX);
+    while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
+    motA.run();
+    motB.run();
+    }
+  }
+  
+  if (abs(stepsY) > 0) {
+    // Then do the y-translation
+    motA.moveTo(-stepsY);
+    motB.moveTo(-stepsY);
+    while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
+    motA.run();
+    motB.run();
+    }
+  }
+}
+
+void moveToDiag(float squareCoordX, float squareCoordY, int speed)
+{
+  motorsSetSpeed(speed);
+
+  float stepsX = squaresToSteps(squareCoordX);
+  float stepsY = squaresToSteps(squareCoordY);
+  float steps[] = {-1*(stepsX + stepsY), (stepsX - stepsY)};
+  motA.moveTo(steps[0]);
+  motB.moveTo(steps[1]);
   while ((abs(motA.distanceToGo()) > 0) || (abs(motB.distanceToGo()) > 0)) {
     motA.run();
     motB.run();
@@ -626,4 +611,25 @@ float distanceToSquares(float distanceMM)
 {
   float squares = distanceMM / SQUARE_SIZE_MM;
   return squares;
+}
+
+void readMove() {
+  bool validInput = false;
+
+  while (!validInput) {
+    Serial.println("Please enter a move:");
+
+    while (Serial.available() == 0); // Wait for user input to become available
+
+    String str = Serial.readStringUntil('\n');
+    if (str.length() == 4) { // Check if the input has exactly four characters
+      str.toCharArray(mov, str.length() + 1); // Correct the syntax for toCharArray()
+      validInput = true; // Set validInput to true to exit the loop
+      // Your code to process the input goes here
+    } else {
+      Serial.println("Invalid input. Please enter exactly four characters.");
+    }
+
+    delay(100); // Add a small delay to prevent constant looping
+  }
 }
